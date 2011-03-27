@@ -1,7 +1,7 @@
 #import <Foundation/Foundation.h>
 #import <Nu/Nu.h>
 
-@implementation NSString (ParsingExtensions)
+@implementation NSString (NuCSV)
 
 -(NSArray *)csvRows {
     NSMutableArray *rows = [NSMutableArray array];
@@ -69,6 +69,56 @@
     }
 
     return rows;
+}
+
+-(NSString *) CSVEscapedString
+{    
+    NSString *escapedString = self;
+    
+    BOOL containsSeperator = !NSEqualRanges([self rangeOfString:@","], NSMakeRange(NSNotFound, 0));
+    BOOL containsQuotes = !NSEqualRanges([self rangeOfString:@"\""], NSMakeRange(NSNotFound, 0));
+    BOOL containsLineBreak = !NSEqualRanges([self rangeOfString:@"\n"], NSMakeRange(NSNotFound, 0));
+
+    if (containsQuotes) {
+        escapedString = [escapedString stringByReplacingOccurrencesOfString:@"\"" withString:@"\"\""];
+    }
+    
+    if (containsSeperator || containsLineBreak) {
+        escapedString = [NSString stringWithFormat:@"\"%@\"", escapedString];
+    }
+    
+    return escapedString;
+}
+@end
+
+@implementation NSArray (NuCSV)
+
+- (NSString *) CSVRowRepresentation
+{
+    NSMutableString * string = [NSMutableString string];
+    BOOL firstColumn = YES;
+    for(id column in self) {
+        NSString *columnString;
+        if ([column isKindOfClass:[NSString class]]) {
+            columnString = column;               
+        } else {        
+            columnString = [column stringValue];
+        }
+        NSString *separator = !firstColumn ? @"," : @"";        
+		[string appendFormat:@"%@%@", separator, [columnString CSVEscapedString]];
+        firstColumn = NO;
+    }
+    [string appendString:@"\n"];
+	return string;
+}
+
+- (NSString *) CSVRepresentation 
+{
+	NSMutableString *string = [NSMutableString string];
+	for (id row in self) {
+		[string appendString:[row CSVRowRepresentation]];
+	}
+	return string;
 }
 
 @end
